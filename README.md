@@ -23,17 +23,15 @@ Developed with HTML, CSS, JavaScript, and Python. AI tools may be used during de
 
 The application itself does not use LLMs, external APIs, or online queries.
 
+## Licensing & Attribution
 
-## Licensing
+This project uses game content derived from the D&D 5.2 System Reference Document, available under the Creative Commons Attribution 4.0 International (CC BY 4.0) license.
 
-This project is licensed under the Creative Commons Attribution-NonCommercial 4.0 International License (CC BY-NC 4.0).
+Some equipment data used in this project was obtained from the [Open5e](https://open5e.com/) API and may incorporate data derived from Open Game Content and/or Creative Commons-licensed material. Open5e is used as a data source and reference for the project's local equipment database.
 
-You may use, copy, modify, and share this project for personal and other non-commercial purposes, provided appropriate attribution is given.
+This project is not affiliated with or endorsed by Wizards of the Coast or Open5e.
 
-Commercial use, sale, or distribution of this project or modified versions is not permitted without prior permission from the copyright holder.
-
-For the full license terms, see:
-https://creativecommons.org/licenses/by-nc/4.0/
+See the relevant source materials and licenses for the complete terms applicable to the underlying content.
 
 ### SRD 5.2
 

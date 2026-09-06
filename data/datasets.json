@@ -1,0 +1,11 @@
+[
+  {
+    "id": "srd-5.2",
+    "name": "D&D 5.2 SRD",
+    "source": "5.2 SRD",
+    "enabled": true,
+    "files": [
+      "srd-5.2/equipment.json"
+    ]
+  }
+]

@@ -1,0 +1,14 @@
+
+{
+  "item_id": "acid",
+  "item_name": "Acid",
+  "source": "5.2 SRD",
+  "category": "Adventuring Gear",
+  "type": null,
+  "rarity": null,
+  "properties": null,
+  "details": { },
+  "description": "...",
+  "cost_cp": 2500,
+  "weight": 1
+}

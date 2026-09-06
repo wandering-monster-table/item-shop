@@ -1,15 +1,301 @@
 <!DOCTYPE html>
 <html lang="en">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
     <title>D&D Equipment Shop</title>
+
+    <link rel="stylesheet" href="css/styles.css">
 </head>
+
 <body>
 
-    <h1>D&D Equipment Shop</h1>
+<header class="site-header">
+    <div class="header-inner">
 
-    <p>Milestone 1 development server is working.</p>
+        <div class="brand">
+            <h1><span class="logo">Wandering Monster Table</span>&ensp; Equipment Shop for 5e</h1>
+        </div>
+
+        <div class="settings">
+            <button
+                id="settings-button"
+                class="settings-button"
+                type="button"
+                aria-expanded="false"
+            >
+                Settings
+            </button>
+
+            <div
+                id="settings-menu"
+                class="settings-menu"
+                hidden
+            >
+                <div class="settings-menu-title">
+                    Shop Settings
+                </div>
+
+                <div class="settings-option">
+                    <label for="dataset-select">
+                        Equipment Dataset
+                    </label>
+
+                    <select id="dataset-select">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</header>
+
+
+<main class="page">
+
+    <section class="shop">
+
+        <div class="shop-header">
+            <h2>Equipment</h2>
+            <p id="status">Loading...</p>
+        </div>
+
+
+        <!-- Filters -->
+
+        <section class="filters">
+
+            <!-- Search -->
+
+            <div class="filter-search">
+                <label for="search-input">
+                    Search
+                </label>
+
+                <input
+                    id="search-input"
+                    type="search"
+                    placeholder="Search equipment..."
+                    autocomplete="off"
+                >
+            </div>
+
+
+            <!-- Category -->
+
+            <div class="filter-group category-filter">
+
+                <label>
+                    Category
+                </label>
+
+                <div class="filter-popover">
+
+                    <button
+                        id="category-button"
+                        class="filter-button"
+                        type="button"
+                        aria-expanded="false"
+                    >
+                        <span id="category-label">All</span>
+                        <span
+                            class="filter-button-arrow"
+                            aria-hidden="true"
+                        >
+                            ⌄
+                        </span>
+                    </button>
+
+                    <div
+                        id="category-menu"
+                        class="filter-popover-menu category-menu"
+                        hidden
+                    >
+                        <div
+                            id="category-options"
+                            class="category-options"
+                        ></div>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+            <!-- Cost -->
+
+            <div class="filter-group">
+
+                <label>
+                    Cost
+                </label>
+
+                <div class="range-inputs">
+
+                    <input
+                        id="cost-min"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="Min gp"
+                        aria-label="Minimum cost in gold pieces"
+                    >
+
+                    <span>–</span>
+
+                    <input
+                        id="cost-max"
+                        type="number"
+                        min="0"
+                        step="1"
+                        placeholder="Max gp"
+                        aria-label="Maximum cost in gold pieces"
+                    >
+
+                </div>
+
+            </div>
+
+
+            <!-- Filter actions -->
+
+            <div class="filter-actions">
+
+                <div class="filter-popover">
+
+                    <button
+                        id="more-filters-button"
+                        class="filter-button icon-filter-button"
+                        type="button"
+                        aria-expanded="false"
+                        aria-label="More filters"
+                    >
+                        <span
+                            class="filter-icon"
+                            aria-hidden="true"
+                        >
+                            ☰
+                        </span>
+                    </button>
+
+                    <div
+                        id="more-filters"
+                        class="filter-popover-menu more-filters-menu"
+                        hidden
+                    >
+                        <div class="popover-placeholder">
+                            Additional filters will appear here.
+                        </div>
+                    </div>
+
+                </div>
+
+
+                <button
+                    id="reset-filters"
+                    class="filter-button reset-button"
+                    type="button"
+                >
+                    Reset
+                </button>
+
+            </div>
+
+        </section>
+
+
+        <!-- Equipment table -->
+
+        <div class="equipment-table">
+
+            <div class="equipment-table-header">
+
+                <button
+                    class="table-sort-button"
+                    data-sort="name"
+                    type="button"
+                >
+                    <span>Name</span>
+                    <span class="sort-indicator"></span>
+                </button>
+
+                <button
+                    class="table-sort-button"
+                    data-sort="category"
+                    type="button"
+                >
+                    <span>Category</span>
+                    <span class="sort-indicator"></span>
+                </button>
+
+                <button
+                    class="table-sort-button"
+                    data-sort="type"
+                    type="button"
+                >
+                    <span>Type</span>
+                    <span class="sort-indicator"></span>
+                </button>
+
+                <button
+                    class="table-sort-button"
+                    data-sort="cost"
+                    type="button"
+                >
+                    <span>Cost</span>
+                    <span class="sort-indicator"></span>
+                </button>
+
+            </div>
+
+            <div id="equipment-list"></div>
+
+        </div>
+
+    </section>
+
+
+    <!-- Cart -->
+
+    <aside class="cart">
+
+        <div class="cart-header">
+            <h2>Cart</h2>
+            <span id="cart-count">0 items</span>
+        </div>
+
+        <div
+            id="cart-items"
+            class="cart-items"
+        >
+            <p class="empty-state">
+                Your cart is empty.
+            </p>
+        </div>
+
+        <div class="cart-footer">
+
+            <div>
+                <span>Total</span>
+                <strong id="cart-cost">0 cp</strong>
+            </div>
+
+            <div>
+                <span>Weight</span>
+                <span id="cart-weight">0 lb</span>
+            </div>
+
+        </div>
+
+    </aside>
+
+</main>
+
+
+<script type="module" src="js/app.js"></script>
 
 </body>
 </html>
