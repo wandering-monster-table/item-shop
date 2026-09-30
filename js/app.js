@@ -1,4 +1,15 @@
 import { loadDatasetIndex, loadDataset } from "./data.js";
+import {
+    loadCart,
+    getCart,
+    addToCart,
+    decreaseCartQuantity,
+    setCartQuantity,
+    clearCart,
+    getCartItemCount,
+    getCartTotal,
+    getCartWeight
+} from "./cart.js";
 
 const DATASET_STORAGE_KEY = "dnd-equipment-shop-dataset";
 
@@ -16,8 +27,11 @@ const state = {
     filters: {
         search: "",
         categories: new Set(),
+        rarities: new Set(),
         costMin: null,
-        costMax: null
+        costMax: null,
+        weightMin: null,
+        weightMax: null
     }
 };
 
@@ -29,21 +43,58 @@ const state = {
 const $ = selector => document.querySelector(selector);
 
 const searchInput = $("#search-input");
+
 const categoryButton = $("#category-button");
 const categoryLabel = $("#category-label");
 const categoryMenu = $("#category-menu");
 const categoryOptions = $("#category-options");
+
 const costMinInput = $("#cost-min");
 const costMaxInput = $("#cost-max");
+
+const weightMinInput = $("#weight-min");
+const weightMaxInput = $("#weight-max");
+
+const rarityOptions = $("#rarity-options");
+
 const resetFiltersButton = $("#reset-filters");
+
 const moreFiltersButton = $("#more-filters-button");
 const moreFilters = $("#more-filters");
+
 const datasetSelect = $("#dataset-select");
+
 const equipmentList = $("#equipment-list");
 const status = $("#status");
+
 const settingsButton = $("#settings-button");
 const settingsMenu = $("#settings-menu");
+
 const sortButtons = document.querySelectorAll(".table-sort-button");
+
+const cartBackdrop = $("#cart-backdrop");
+const cartButton = $("#cart-button");
+const cartCounter = $("#cart-counter");
+const cartClose = $("#cart-close");
+const cartElement = $(".cart");
+const cartItems = $("#cart-items");
+const cartCount = $("#cart-count");
+const cartCost = $("#cart-cost");
+const cartWeight = $("#cart-weight");
+
+const emptyCartButton = $("#empty-cart");
+const emptyCartModal = $("#empty-cart-modal");
+const emptyCartModalMessage = $("#empty-cart-modal-message");
+const emptyCartModalClose = $("#empty-cart-modal-close");
+const emptyCartCancel = $("#empty-cart-cancel");
+const emptyCartConfirm = $("#empty-cart-confirm");
+
+const purchaseButton = $("#purchase-button");
+const purchaseModal = $("#purchase-modal");
+const purchaseSummary = $("#purchase-summary");
+const purchaseModalClose = $("#purchase-modal-close");
+const purchaseCancel = $("#purchase-cancel");
+const purchaseConfirm = $("#purchase-confirm");
 
 
 // =========================================================
@@ -51,16 +102,20 @@ const sortButtons = document.querySelectorAll(".table-sort-button");
 // =========================================================
 
 async function init() {
+    loadCart();
+
     setupSettings();
     setupFilters();
     setupSorting();
     setupMoreFilters();
+    setupCartActions();
 
     try {
         state.datasets = await loadDatasetIndex();
         populateDatasetSelect();
 
         const savedId = getStorage(DATASET_STORAGE_KEY);
+
         const dataset =
             state.datasets.find(item => item.id === savedId) ||
             state.datasets[0];
@@ -70,7 +125,10 @@ async function init() {
         }
 
         datasetSelect.value = dataset.id;
+
         await selectDataset(dataset.id);
+
+        renderCart();
     } catch (error) {
         showError(error);
     }
@@ -84,7 +142,11 @@ async function init() {
 function setupSettings() {
     settingsButton.addEventListener("click", event => {
         event.stopPropagation();
-        togglePopover(settingsMenu, settingsButton);
+
+        togglePopover(
+            settingsMenu,
+            settingsButton
+        );
     });
 
     settingsMenu.addEventListener("click", event => {
@@ -122,49 +184,324 @@ function closePopover(menu, button) {
 
 
 // =========================================================
+// Cart Actions
+// =========================================================
+
+function setupCartActions() {
+    cartButton.addEventListener("click", () => {
+        openCart();
+    });
+
+    cartClose.addEventListener("click", () => {
+        closeCart();
+    });
+    
+    cartBackdrop.addEventListener("click", () => {
+        closeCart();
+        renderCart();
+    });
+
+    emptyCartButton.addEventListener("click", () => {
+        openEmptyCartModal();
+    });
+
+    emptyCartModalClose.addEventListener("click", () => {
+        closeEmptyCartModal();
+    });
+
+    emptyCartCancel.addEventListener("click", () => {
+        closeEmptyCartModal();
+    });
+
+    emptyCartModal
+        .querySelector(".modal-backdrop")
+        .addEventListener("click", () => {
+            closeEmptyCartModal();
+        });
+
+    emptyCartConfirm.addEventListener("click", () => {
+        clearCart();
+        renderCart();
+        closeEmptyCartModal();
+    });
+
+    purchaseButton.addEventListener("click", () => {
+        openPurchaseModal();
+    });
+
+    purchaseModalClose.addEventListener("click", () => {
+        closePurchaseModal();
+    });
+
+    purchaseCancel.addEventListener("click", () => {
+        closePurchaseModal();
+    });
+
+    purchaseModal
+        .querySelector(".modal-backdrop")
+        .addEventListener("click", () => {
+            closePurchaseModal();
+        });
+
+    purchaseConfirm.addEventListener("click", () => {
+        confirmPurchase();
+    });
+
+    emptyCartButton.addEventListener("click", () => {
+        openEmptyCartModal();
+    });
+
+    document.addEventListener("keydown", event => {
+        if (event.key !== "Escape") {
+            return;
+        }
+
+        closeCart();
+        closePurchaseModal();
+        closeEmptyCartModal();
+        closePopovers();
+    });
+}
+
+function openCart() {
+    cartElement.classList.remove("cart-closed");
+    cartBackdrop.classList.add("cart-backdrop-open")
+}
+
+function closeCart() {
+    cartElement.classList.add("cart-closed");
+    cartBackdrop.classList.remove("cart-backdrop-open");
+}
+
+
+// =========================================================
+// Empty cart
+// =========================================================
+function openEmptyCartModal() {
+    const itemCount = getCartItemCount();
+
+    if (itemCount === 0) {
+        return;
+    }
+
+    emptyCartModalMessage.textContent =
+        `Remove all ${itemCount} ${
+            itemCount === 1 ? "item" : "items"
+        } from your cart?`;
+
+    emptyCartModal.hidden = false;
+}
+
+function closeEmptyCartModal() {
+    emptyCartModal.hidden = true;
+}
+
+
+// =========================================================
+// Purchase
+// =========================================================
+
+function openPurchaseModal() {
+    const cart = getCart();
+
+    if (cart.size === 0) {
+        return;
+    }
+
+    purchaseSummary.innerHTML = "";
+
+    for (const [itemId, quantity] of cart) {
+        const item = findItem(itemId);
+
+        if (!item) {
+            continue;
+        }
+
+        const row = document.createElement("div");
+        row.className = "purchase-item";
+
+        const name = document.createElement("span");
+        name.className = "purchase-item-name";
+        name.textContent =
+            `${quantity} × ${item.item_name}`;
+
+        const cost = document.createElement("span");
+        cost.className = "purchase-item-cost";
+        cost.textContent =
+            formatCost(item.cost_cp * quantity);
+
+        row.append(name, cost);
+        purchaseSummary.appendChild(row);
+    }
+
+    const divider = document.createElement("div");
+    divider.className = "purchase-divider";
+
+    const totalRow = document.createElement("div");
+    totalRow.className = "purchase-total";
+
+    const totalLabel = document.createElement("span");
+    totalLabel.textContent = "Total";
+
+    const totalCost = document.createElement("strong");
+    totalCost.textContent =
+        formatCost(getCartTotal(state.items));
+
+    totalRow.append(totalLabel, totalCost);
+
+    const weightRow = document.createElement("div");
+    weightRow.className = "purchase-weight";
+
+    const weightLabel = document.createElement("span");
+    weightLabel.textContent = "Weight";
+
+    const weight = document.createElement("span");
+    weight.textContent =
+        `${formatNumber(getCartWeight(state.items))} lb`;
+
+    weightRow.append(weightLabel, weight);
+
+    purchaseSummary.append(
+        divider,
+        totalRow,
+        weightRow
+    );
+
+    purchaseModal.hidden = false;
+}
+
+function closePurchaseModal() {
+    purchaseModal.hidden = true;
+}
+
+async function confirmPurchase() {
+    const markdown = createPurchaseMarkdown();
+
+    try {
+        await navigator.clipboard.writeText(markdown);
+        clearCart();
+        renderCart();
+
+        closePurchaseModal();
+    } catch {
+        alert(
+            "Could not copy the purchase list to the clipboard."
+        );
+    }
+}
+
+function createPurchaseMarkdown() {
+    const cart = getCart();
+
+    const lines = [
+        "### Equipment Purchase",
+        ""
+    ];
+
+    for (const [itemId, quantity] of cart) {
+        const item = findItem(itemId);
+
+        if (!item) {
+            continue;
+        }
+
+        const totalItemCost =
+            item.cost_cp * quantity;
+
+        lines.push(
+            `- ${quantity}× ${item.item_name} (${formatCost(totalItemCost)})`
+        );
+    }
+
+    lines.push(
+        "",
+        `**Total:** ${formatCost(getCartTotal(state.items))}`,
+        `**Weight:** ${formatNumber(getCartWeight(state.items))} lb`
+    );
+
+    return lines.join("\n");
+}
+
+
+// =========================================================
 // Filters
 // =========================================================
 
 function setupFilters() {
     searchInput.addEventListener("input", () => {
-        state.filters.search = searchInput.value.trim();
+        state.filters.search =
+            searchInput.value.trim();
+
         renderEquipment();
     });
 
     costMinInput.addEventListener("input", () => {
-        state.filters.costMin = gpToCp(
-            parseNumberOrNull(costMinInput.value)
-        );
+        state.filters.costMin =
+            gpToCp(
+                parseNumberOrNull(costMinInput.value)
+            );
+
         renderEquipment();
     });
 
     costMaxInput.addEventListener("input", () => {
-        state.filters.costMax = gpToCp(
-            parseNumberOrNull(costMaxInput.value)
-        );
+        state.filters.costMax =
+            gpToCp(
+                parseNumberOrNull(costMaxInput.value)
+            );
+
         renderEquipment();
     });
 
     categoryButton.addEventListener("click", event => {
         event.stopPropagation();
-        togglePopover(categoryMenu, categoryButton);
+
+        togglePopover(
+            categoryMenu,
+            categoryButton
+        );
     });
 
     categoryMenu.addEventListener("click", event => {
         event.stopPropagation();
     });
 
-    resetFiltersButton.addEventListener("click", resetFilters);
+    resetFiltersButton.addEventListener(
+        "click",
+        resetFilters
+    );
 }
 
 function setupMoreFilters() {
     moreFiltersButton.addEventListener("click", event => {
         event.stopPropagation();
-        togglePopover(moreFilters, moreFiltersButton);
+
+        togglePopover(
+            moreFilters,
+            moreFiltersButton
+        );
     });
 
     moreFilters.addEventListener("click", event => {
         event.stopPropagation();
+    });
+
+    weightMinInput.addEventListener("input", () => {
+        state.filters.weightMin =
+            parseNumberOrNull(
+                weightMinInput.value
+            );
+
+        renderEquipment();
+    });
+
+    weightMaxInput.addEventListener("input", () => {
+        state.filters.weightMax =
+            parseNumberOrNull(
+                weightMaxInput.value
+            );
+
+        renderEquipment();
     });
 }
 
@@ -180,7 +517,9 @@ function setupSorting() {
 
             if (state.sort.field === field) {
                 state.sort.direction =
-                    state.sort.direction === "asc" ? "desc" : "asc";
+                    state.sort.direction === "asc"
+                        ? "desc"
+                        : "asc";
             } else {
                 state.sort.field = field;
                 state.sort.direction = "asc";
@@ -196,12 +535,18 @@ function setupSorting() {
 
 function updateSortIndicators() {
     for (const button of sortButtons) {
-        const active = button.dataset.sort === state.sort.field;
-        const indicator = button.querySelector(".sort-indicator");
+        const active =
+            button.dataset.sort === state.sort.field;
+
+        const indicator =
+            button.querySelector(".sort-indicator");
 
         button.classList.toggle("active", active);
+
         indicator.textContent = active
-            ? state.sort.direction === "asc" ? " ↑" : " ↓"
+            ? state.sort.direction === "asc"
+                ? " ↑"
+                : " ↓"
             : "";
     }
 }
@@ -215,7 +560,8 @@ function populateDatasetSelect() {
     datasetSelect.innerHTML = "";
 
     for (const dataset of state.datasets) {
-        const option = document.createElement("option");
+        const option =
+            document.createElement("option");
 
         option.value = dataset.id;
         option.textContent = dataset.name;
@@ -225,7 +571,10 @@ function populateDatasetSelect() {
 }
 
 async function selectDataset(datasetId) {
-    const dataset = state.datasets.find(item => item.id === datasetId);
+    const dataset =
+        state.datasets.find(
+            item => item.id === datasetId
+        );
 
     if (!dataset) {
         return;
@@ -238,9 +587,14 @@ async function selectDataset(datasetId) {
         state.expandedItems.clear();
         state.items = await loadDataset(dataset);
 
-        setStorage(DATASET_STORAGE_KEY, dataset.id);
+        setStorage(
+            DATASET_STORAGE_KEY,
+            dataset.id
+        );
 
         buildCategoryFilter();
+        buildRarityFilter();
+
         resetFilters();
     } catch (error) {
         showError(error);
@@ -264,13 +618,18 @@ function buildCategoryFilter() {
     ].sort(compareStrings);
 
     for (const category of categories) {
-        const label = document.createElement("label");
+        const label =
+            document.createElement("label");
+
         label.className = "category-option";
 
-        const checkbox = document.createElement("input");
+        const checkbox =
+            document.createElement("input");
+
         checkbox.type = "checkbox";
         checkbox.value = category;
-        checkbox.checked = state.filters.categories.has(category);
+        checkbox.checked =
+            state.filters.categories.has(category);
 
         checkbox.addEventListener("change", () => {
             if (checkbox.checked) {
@@ -283,7 +642,9 @@ function buildCategoryFilter() {
             renderEquipment();
         });
 
-        const text = document.createElement("span");
+        const text =
+            document.createElement("span");
+
         text.textContent = category;
 
         label.append(checkbox, text);
@@ -293,8 +654,63 @@ function buildCategoryFilter() {
     updateCategoryLabel();
 }
 
+
+// =========================================================
+// Rarity Filter
+// =========================================================
+
+function buildRarityFilter() {
+    rarityOptions.innerHTML = "";
+
+    const rarities = [
+        ...new Set(
+            state.items
+                .map(item => item.rarity)
+                .filter(hasValue)
+        )
+    ].sort(compareStrings);
+
+    for (const rarity of rarities) {
+        const label =
+            document.createElement("label");
+
+        label.className = "category-option";
+
+        const checkbox =
+            document.createElement("input");
+
+        checkbox.type = "checkbox";
+        checkbox.value = rarity;
+        checkbox.checked =
+            state.filters.rarities.has(rarity);
+
+        checkbox.addEventListener("change", () => {
+            if (checkbox.checked) {
+                state.filters.rarities.add(rarity);
+            } else {
+                state.filters.rarities.delete(rarity);
+            }
+
+            renderEquipment();
+        });
+
+        const text =
+            document.createElement("span");
+
+        text.textContent =
+            rarity.replace(
+                /\b\w/g,
+                char => char.toUpperCase()
+            );
+
+        label.append(checkbox, text);
+        rarityOptions.appendChild(label);
+    }
+}
+
 function updateCategoryLabel() {
-    const selected = [...state.filters.categories];
+    const selected =
+        [...state.filters.categories];
 
     categoryLabel.textContent =
         selected.length === 0
@@ -312,27 +728,39 @@ function updateCategoryLabel() {
 function resetFilters() {
     state.filters.search = "";
     state.filters.categories.clear();
+    state.filters.rarities.clear();
+
     state.filters.costMin = null;
     state.filters.costMax = null;
+
+    state.filters.weightMin = null;
+    state.filters.weightMax = null;
 
     searchInput.value = "";
     costMinInput.value = "";
     costMaxInput.value = "";
+    weightMinInput.value = "";
+    weightMaxInput.value = "";
 
-    categoryOptions
-        .querySelectorAll('input[type="checkbox"]')
-        .forEach(checkbox => {
-            checkbox.checked = false;
-        });
+    resetCheckboxes(categoryOptions);
+    resetCheckboxes(rarityOptions);
 
     updateCategoryLabel();
     renderEquipment();
 }
 
-function getFilteredItems() {
-    return state.items.filter(item => {
-        const filters = state.filters;
+function resetCheckboxes(container) {
+    container
+        .querySelectorAll('input[type="checkbox"]')
+        .forEach(checkbox => {
+            checkbox.checked = false;
+        });
+}
 
+function getFilteredItems() {
+    const filters = state.filters;
+
+    return state.items.filter(item => {
         if (
             filters.search &&
             !matchesSearch(item, filters.search)
@@ -343,6 +771,13 @@ function getFilteredItems() {
         if (
             filters.categories.size &&
             !filters.categories.has(item.category)
+        ) {
+            return false;
+        }
+
+        if (
+            filters.rarities.size &&
+            !filters.rarities.has(item.rarity)
         ) {
             return false;
         }
@@ -362,6 +797,26 @@ function getFilteredItems() {
             (
                 typeof item.cost_cp !== "number" ||
                 item.cost_cp > filters.costMax
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            filters.weightMin !== null &&
+            (
+                typeof item.weight !== "number" ||
+                item.weight < filters.weightMin
+            )
+        ) {
+            return false;
+        }
+
+        if (
+            filters.weightMax !== null &&
+            (
+                typeof item.weight !== "number" ||
+                item.weight > filters.weightMax
             )
         ) {
             return false;
@@ -391,54 +846,90 @@ function matchesSearch(item, search) {
 
 
 // =========================================================
-// Sorting / Rendering
+// Equipment Rendering
 // =========================================================
 
 function sortItems(items) {
-    const { field, direction } = state.sort;
+    const {
+        field,
+        direction
+    } = state.sort;
 
     return [...items].sort((a, b) => {
-        const result = {
-            name: compareStrings(a.item_name, b.item_name),
-            category: compareStrings(a.category, b.category),
-            type: compareStrings(a.type, b.type),
-            cost: compareNumbers(a.cost_cp, b.cost_cp)
-        }[field] ?? compareStrings(a.item_name, b.item_name);
+        const result =
+            {
+                name: compareStrings(
+                    a.item_name,
+                    b.item_name
+                ),
 
-        return direction === "asc" ? result : -result;
+                category: compareStrings(
+                    a.category,
+                    b.category
+                ),
+
+                type: compareStrings(
+                    a.type,
+                    b.type
+                ),
+
+                cost: compareNumbers(
+                    a.cost_cp,
+                    b.cost_cp
+                )
+            }[field] ??
+            compareStrings(
+                a.item_name,
+                b.item_name
+            );
+
+        return direction === "asc"
+            ? result
+            : -result;
     });
 }
 
 function renderEquipment() {
-    const sorted = sortItems(getFilteredItems());
+    const sorted =
+        sortItems(getFilteredItems());
 
     equipmentList.innerHTML = "";
 
     if (!sorted.length) {
-        const empty = document.createElement("div");
+        const empty =
+            document.createElement("div");
 
         empty.className = "empty-results";
-        empty.textContent = "No equipment matches your filters.";
+        empty.textContent =
+            "No equipment matches your filters.";
 
         equipmentList.appendChild(empty);
+
         updateStatus(0);
 
         return;
     }
 
     for (const item of sorted) {
-        equipmentList.appendChild(createEquipmentRow(item));
+        equipmentList.appendChild(
+            createEquipmentRow(item)
+        );
     }
 
     updateStatus(sorted.length);
 }
 
 function createEquipmentRow(item) {
-    const row = document.createElement("div");
+    const row =
+        document.createElement("div");
+
     row.className = "equipment-row";
 
-    const summary = document.createElement("div");
-    summary.className = "equipment-row-summary";
+    const summary =
+        document.createElement("div");
+
+    summary.className =
+        "equipment-row-summary";
 
     const fields = [
         ["item-name", item.item_name],
@@ -448,7 +939,8 @@ function createEquipmentRow(item) {
     ];
 
     for (const [className, value] of fields) {
-        const element = document.createElement("div");
+        const element =
+            document.createElement("div");
 
         element.className = className;
         element.textContent = value;
@@ -456,10 +948,36 @@ function createEquipmentRow(item) {
         summary.appendChild(element);
     }
 
+    if (!state.expandedItems.has(item.item_id)) {
+        const addButton =
+            document.createElement("button");
+
+        addButton.type = "button";
+        addButton.className =
+            "add-to-cart-button";
+        addButton.textContent = "+";
+
+        addButton.setAttribute(
+            "aria-label",
+            `Add ${item.item_name} to cart`
+        );
+
+        addButton.addEventListener("click", event => {
+            event.stopPropagation();
+
+            addToCart(item.item_id);
+            renderCart();
+        });
+
+        summary.appendChild(addButton);
+    }
+
     row.appendChild(summary);
 
     if (state.expandedItems.has(item.item_id)) {
-        row.appendChild(createDetails(item));
+        row.appendChild(
+            createDetails(item)
+        );
     }
 
     row.addEventListener("click", () => {
@@ -477,12 +995,192 @@ function createEquipmentRow(item) {
 
 
 // =========================================================
+// Cart Rendering
+// =========================================================
+
+function renderCart() {
+    const cart = getCart();
+    const itemCount = getCartItemCount();
+
+    cartItems.innerHTML = "";
+    cartCounter.textContent = itemCount;
+    cartCounter.hidden = itemCount === 0;
+
+    if (cart.size === 0) {
+        const empty =
+            document.createElement("p");
+
+        empty.className =
+            "cart-item empty-state";
+
+        empty.textContent =
+            "Your cart is empty.";
+
+        cartItems.appendChild(empty);
+    } else {
+        for (const [itemId, quantity] of cart) {
+            const item = findItem(itemId);
+
+            if (!item) {
+                continue;
+            }
+
+            cartItems.appendChild(
+                createCartItem(
+                    item,
+                    quantity
+                )
+            );
+        }
+    }
+
+    cartCount.textContent =
+        `${itemCount} ${itemCount === 1 ? "item" : "items"}`;
+
+    cartCost.textContent =
+        formatCost(
+            getCartTotal(state.items)
+        );
+
+    cartWeight.textContent =
+        `${formatNumber(
+            getCartWeight(state.items)
+        )} lb`;
+
+        emptyCartButton.hidden = itemCount === 0;
+}
+
+function createCartItem(item, quantity) {
+    const element =
+        document.createElement("div");
+
+    element.className = "cart-item";
+
+    const name =
+        document.createElement("span");
+
+    name.className =
+        "cart-item-name";
+
+    name.textContent =
+        item.item_name;
+
+    const cost =
+        document.createElement("span");
+
+    cost.className =
+        "cart-item-cost";
+
+    cost.textContent =
+        formatCost(item.cost_cp);
+
+    const controls =
+        document.createElement("div");
+
+    controls.className =
+        "cart-item-controls";
+
+    const decreaseButton =
+        document.createElement("button");
+
+    decreaseButton.type = "button";
+    decreaseButton.className =
+        "cart-quantity-button";
+
+    decreaseButton.textContent = "−";
+
+    decreaseButton.setAttribute(
+        "aria-label",
+        `Decrease ${item.item_name} quantity`
+    );
+
+    decreaseButton.addEventListener("click", event => {
+        event.stopPropagation();
+
+        decreaseCartQuantity(
+            item.item_id
+        );
+
+        renderCart();
+    });
+
+    const quantityInput =
+        document.createElement("input");
+
+    quantityInput.type = "number";
+    quantityInput.min = "1";
+    quantityInput.step = "1";
+    quantityInput.value = quantity;
+
+    quantityInput.className =
+        "cart-quantity-input";
+
+    quantityInput.setAttribute(
+        "aria-label",
+        `${item.item_name} quantity`
+    );
+
+    quantityInput.addEventListener(
+        "change",
+        event => {
+            event.stopPropagation();
+
+            setCartQuantity(
+                item.item_id,
+                quantityInput.value
+            );
+
+            renderCart();
+        }
+    );
+
+    const increaseButton =
+        document.createElement("button");
+
+    increaseButton.type = "button";
+    increaseButton.className =
+        "cart-quantity-button";
+
+    increaseButton.textContent = "+";
+
+    increaseButton.setAttribute(
+        "aria-label",
+        `Increase ${item.item_name} quantity`
+    );
+
+    increaseButton.addEventListener("click", event => {
+        event.stopPropagation();
+
+        addToCart(item.item_id);
+        renderCart();
+    });
+
+    controls.append(
+        decreaseButton,
+        quantityInput,
+        increaseButton
+    );
+
+    element.append(
+        name,
+        cost,
+        controls
+    );
+
+    return element;
+}
+
+
+// =========================================================
 // Item Details
 // =========================================================
 
 function createDetails(item) {
-    const details = document.createElement("div");
-    details.className = "equipment-details";
+    const details =
+        document.createElement("div");
+
+    details.className =
+        "equipment-details";
 
     addDetailField(
         details,
@@ -508,8 +1206,14 @@ function createDetails(item) {
         item.rarity
     );
 
-    if (item.details && Object.keys(item.details).length) {
-        for (const [key, value] of Object.entries(item.details)) {
+    if (
+        item.details &&
+        Object.keys(item.details).length
+    ) {
+        for (
+            const [key, value]
+            of Object.entries(item.details)
+        ) {
             if (!hasValue(value)) {
                 continue;
             }
@@ -523,48 +1227,47 @@ function createDetails(item) {
     }
 
     if (hasValue(item.description)) {
-        const description = document.createElement("div");
+        const description =
+            document.createElement("div");
 
-        description.className = "item-description";
-        description.textContent = item.description;
+        description.className =
+            "item-description";
+
+        description.textContent =
+            item.description;
 
         details.appendChild(description);
     }
 
+    const addButton =
+        document.createElement("button");
+
+    addButton.type = "button";
+    addButton.className =
+        "details-add-to-cart";
+
+    addButton.textContent =
+        "Add to Cart";
+
+    addButton.addEventListener("click", event => {
+        event.stopPropagation();
+
+        addToCart(item.item_id);
+        renderCart();
+    });
+
+    details.appendChild(addButton);
+
     return details;
-}
-
-function createDetailsTable(values) {
-    const table = document.createElement("table");
-    table.className = "details-table";
-
-    const body = document.createElement("tbody");
-
-    for (const [key, value] of Object.entries(values)) {
-        if (!hasValue(value)) {
-            continue;
-        }
-
-        const row = document.createElement("tr");
-        const label = document.createElement("th");
-        const valueCell = document.createElement("td");
-
-        label.textContent = formatDetailLabel(key);
-        valueCell.textContent = formatDetailValue(value);
-
-        row.append(label, valueCell);
-        body.appendChild(row);
-    }
-
-    table.appendChild(body);
-
-    return table;
 }
 
 function formatDetailLabel(key) {
     return key
         .replace(/_/g, " ")
-        .replace(/\b\w/g, char => char.toUpperCase());
+        .replace(
+            /\b\w/g,
+            char => char.toUpperCase()
+        );
 }
 
 function formatDetailValue(value) {
@@ -575,21 +1278,38 @@ function formatDetailValue(value) {
     return String(value);
 }
 
-function addDetailField(container, label, value) {
+function addDetailField(
+    container,
+    label,
+    value
+) {
     if (!hasValue(value)) {
         return;
     }
 
-    const field = document.createElement("div");
-    field.className = "detail-field";
+    const field =
+        document.createElement("div");
 
-    const labelElement = document.createElement("strong");
-    labelElement.textContent = `${label}:`;
+    field.className =
+        "detail-field";
 
-    const valueElement = document.createElement("span");
-    valueElement.textContent = ` ${value}`;
+    const labelElement =
+        document.createElement("strong");
 
-    field.append(labelElement, valueElement);
+    labelElement.textContent =
+        `${label}:`;
+
+    const valueElement =
+        document.createElement("span");
+
+    valueElement.textContent =
+        ` ${value}`;
+
+    field.append(
+        labelElement,
+        valueElement
+    );
+
     container.appendChild(field);
 }
 
@@ -598,8 +1318,18 @@ function addDetailField(container, label, value) {
 // Formatting / Utilities
 // =========================================================
 
+function findItem(itemId) {
+    return state.items.find(
+        item => item.item_id === itemId
+    );
+}
+
 function hasValue(value) {
-    return value !== null && value !== undefined && value !== "";
+    return (
+        value !== null &&
+        value !== undefined &&
+        value !== ""
+    );
 }
 
 function formatProperties(properties) {
@@ -637,7 +1367,9 @@ function formatNumber(value) {
 
     return Number.isInteger(value)
         ? String(value)
-        : String(Number(value.toFixed(2)));
+        : String(
+            Number(value.toFixed(2))
+        );
 }
 
 function parseNumberOrNull(value) {
@@ -647,18 +1379,24 @@ function parseNumberOrNull(value) {
 
     const number = Number(value);
 
-    return Number.isFinite(number) ? number : null;
+    return Number.isFinite(number)
+        ? number
+        : null;
 }
 
 function gpToCp(gp) {
-    return gp === null ? null : Math.round(gp * 100);
+    return gp === null
+        ? null
+        : Math.round(gp * 100);
 }
 
 function compareStrings(a, b) {
     return String(a || "").localeCompare(
         String(b || ""),
         undefined,
-        { sensitivity: "base" }
+        {
+            sensitivity: "base"
+        }
     );
 }
 
@@ -677,21 +1415,36 @@ function compareNumbers(a, b) {
 }
 
 function formatCost(costCp) {
-    if (typeof costCp !== "number") {
+    if (
+        typeof costCp !== "number" ||
+        !Number.isFinite(costCp)
+    ) {
         return "—";
     }
 
-    if (costCp >= 100) {
-        const gp = costCp / 100;
-        return `${formatNumber(gp)} gp`;
+    const gp = Math.floor(costCp / 100);
+    const sp = Math.floor(
+        (costCp % 100) / 10
+    );
+    const cp = costCp % 10;
+
+    const parts = [];
+
+    if (gp > 0) {
+        parts.push(`${gp} gp`);
     }
 
-    if (costCp >= 10) {
-        const sp = costCp / 10;
-        return `${formatNumber(sp)} sp`;
+    if (sp > 0) {
+        parts.push(`${sp} sp`);
     }
 
-    return `${costCp} cp`;
+    if (cp > 0) {
+        parts.push(`${cp} cp`);
+    }
+
+    return parts.length
+        ? parts.join(", ")
+        : "0 cp";
 }
 
 function updateStatus(count) {
@@ -714,7 +1467,10 @@ function getStorage(key) {
 
 function setStorage(key, value) {
     try {
-        localStorage.setItem(key, value);
+        localStorage.setItem(
+            key,
+            value
+        );
     } catch {
         // Ignore storage errors.
     }
@@ -728,17 +1484,27 @@ function setStorage(key, value) {
 function showError(error) {
     console.error(error);
 
-    status.textContent = "Unable to load equipment.";
+    status.textContent =
+        "Unable to load equipment.";
+
     equipmentList.innerHTML = "";
 
-    const message = document.createElement("div");
+    const message =
+        document.createElement("div");
 
-    message.className = "empty-results";
+    message.className =
+        "empty-results";
+
     message.textContent =
-        error.message || "An unexpected error occurred.";
+        error.message ||
+        "An unexpected error occurred.";
 
     equipmentList.appendChild(message);
 }
 
+
+// =========================================================
+// Start
+// =========================================================
 
 init();

@@ -5,7 +5,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
 
-    <title>D&D Equipment Shop</title>
+    <title>5e Equipment Shop</title>
 
     <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -16,7 +16,7 @@
     <div class="header-inner">
 
         <div class="brand">
-            <h1><span class="logo">Wandering Monster Table</span>&ensp; Equipment Shop for 5e</h1>
+            <h1><span class="logo">Wandering Monster Table</span>&ensp; 5e Equipment Shop</h1>
         </div>
 
         <div class="settings">
@@ -46,6 +46,17 @@
                     <select id="dataset-select">
                         <option value="">Loading...</option>
                     </select>
+
+                    <div class="legal">
+                        <h1>Licensing & Attribution</h1>
+                        <p>Some equipment data used in this project was obtained from the <a href="https://open5e.com/">Open5e</a> API and Creative Commons-licensed material.</p>
+
+                        <h1>SRD 5.2</h1>
+                        <p>
+                        This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at <a href="https://www.dndbeyond.com/srd">https://www.dndbeyond.com/srd</a>.
+                        The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at <a href="https://creativecommons.org/licenses/by/4.0/legalcode">https://creativecommons.org/</a>.
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>
@@ -59,8 +70,19 @@
     <section class="shop">
 
         <div class="shop-header">
-            <h2>Equipment</h2>
-            <p id="status">Loading...</p>
+            <div>
+                <h2>Equipment</h2>
+                <p>Browse and add equipment to your cart.</p>
+            </div>
+
+            <button
+                id="cart-button"
+                class="header-cart-button"
+                type="button"
+            >
+                View cart
+                <span id="cart-counter" class="cart-counter" hidden>0</span>
+            </button>
         </div>
 
 
@@ -100,13 +122,7 @@
                         type="button"
                         aria-expanded="false"
                     >
-                        <span id="category-label">All</span>
-                        <span
-                            class="filter-button-arrow"
-                            aria-hidden="true"
-                        >
-                            ⌄
-                        </span>
+                        <span id="category-label"></span>
                     </button>
 
                     <div
@@ -140,7 +156,7 @@
                         type="number"
                         min="0"
                         step="1"
-                        placeholder="Min gp"
+                        placeholder="Min"
                         aria-label="Minimum cost in gold pieces"
                     >
 
@@ -151,7 +167,7 @@
                         type="number"
                         min="0"
                         step="1"
-                        placeholder="Max gp"
+                        placeholder="Max"
                         aria-label="Maximum cost in gold pieces"
                     >
 
@@ -161,7 +177,6 @@
 
 
             <!-- Filter actions -->
-
             <div class="filter-actions">
 
                 <div class="filter-popover">
@@ -186,13 +201,43 @@
                         class="filter-popover-menu more-filters-menu"
                         hidden
                     >
-                        <div class="popover-placeholder">
-                            Additional filters will appear here.
+                        <div class="more-filter-section">
+                            <div class="more-filter-label">Rarity</div>
+
+                            <div
+                                id="rarity-options"
+                                class="category-options"
+                            ></div>
+                        </div>
+
+                        <div class="more-filter-section">
+                            <div class="more-filter-label">Weight</div>
+
+                            <div class="range-inputs">
+                                <input
+                                    id="weight-min"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    placeholder="Min lb"
+                                    aria-label="Minimum weight in pounds"
+                                >
+
+                                <span>–</span>
+
+                                <input
+                                    id="weight-max"
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    placeholder="Max lb"
+                                    aria-label="Maximum weight in pounds"
+                                >
+                            </div>
                         </div>
                     </div>
 
                 </div>
-
 
                 <button
                     id="reset-filters"
@@ -208,6 +253,8 @@
 
 
         <!-- Equipment table -->
+
+        <div id="status" class="equipment-status"></div>
 
         <div class="equipment-table">
 
@@ -260,39 +307,152 @@
 
     <!-- Cart -->
 
-    <aside class="cart">
+    <div id="cart-backdrop" class="cart-backdrop"></div>
+    <aside class="cart cart-closed">
 
         <div class="cart-header">
             <h2>Cart</h2>
-            <span id="cart-count">0 items</span>
-        </div>
 
+            <span id="cart-count">0 items</span>
+
+            <button
+                id="cart-close"
+                class="cart-close"
+                type="button"
+                aria-label="Close cart"
+            >
+                ×
+            </button>
+        </div>
         <div
             id="cart-items"
             class="cart-items"
-        >
-            <p class="empty-state">
-                Your cart is empty.
-            </p>
+            >
         </div>
 
         <div class="cart-footer">
-
             <div>
                 <span>Total</span>
                 <strong id="cart-cost">0 cp</strong>
             </div>
 
             <div>
-                <span>Weight</span>
+                <span>Item weight</span>
                 <span id="cart-weight">0 lb</span>
             </div>
 
+            <div class="cart-actions">
+                <button 
+                    id="purchase-button"
+                    class="cart-action-button primary" 
+                    type="button"
+                >
+                    Purchase
+                </button>
+                <button
+                    id="empty-cart"
+                    class="empty-cart-link"
+                    type="button"
+                >
+                    Empty Cart
+                </button>
+            </div>
         </div>
 
     </aside>
 
 </main>
+
+<div id="empty-cart-modal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+
+    <div
+        class="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="empty-cart-modal-title"
+    >
+        <div class="modal-header">
+            <h2 id="empty-cart-modal-title">Empty Cart?</h2>
+
+            <button
+                id="empty-cart-modal-close"
+                class="modal-close"
+                type="button"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <div class="purchase-summary">
+            <p id="empty-cart-modal-message"></p>
+        </div>
+
+        <div class="modal-actions">
+            <button
+                id="empty-cart-cancel"
+                class="cart-action-button secondary"
+                type="button"
+            >
+                Cancel
+            </button>
+
+            <button
+                id="empty-cart-confirm"
+                class="cart-action-button danger"
+                type="button"
+            >
+                Empty Cart
+            </button>
+        </div>
+    </div>
+</div>
+
+<div id="purchase-modal" class="modal" hidden>
+    <div class="modal-backdrop"></div>
+
+    <div
+        class="modal-dialog"
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="purchase-modal-title"
+    >
+        <div class="modal-header">
+            <h2 id="purchase-modal-title">Purchase Summary</h2>
+
+            <button
+                id="purchase-modal-close"
+                class="modal-close"
+                type="button"
+                aria-label="Close"
+            >
+                ×
+            </button>
+        </div>
+
+        <div id="purchase-summary" class="purchase-summary"></div>
+
+        <div class="modal-actions">
+            <button
+                id="purchase-cancel"
+                class="cart-action-button secondary"
+                type="button"
+            >
+                Cancel
+            </button>
+
+            <button
+                id="purchase-confirm"
+                class="cart-action-button primary"
+                type="button"
+            >
+                Copy to Clipboard
+            </button>
+        </div>
+    </div>
+</div>
+
 
 
 <script type="module" src="js/app.js"></script>
