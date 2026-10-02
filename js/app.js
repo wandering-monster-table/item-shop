@@ -662,15 +662,25 @@ function buildCategoryFilter() {
 function buildRarityFilter() {
     rarityOptions.innerHTML = "";
 
-    const rarities = [
-        ...new Set(
-            state.items
-                .map(item => item.rarity)
-                .filter(hasValue)
-        )
-    ].sort(compareStrings);
+    const rarityOrder = [
+        { value: null, label: "Mundane" },
+        { value: "Common", label: "Common" },
+        { value: "Uncommon", label: "Uncommon" },
+        { value: "Rare", label: "Rare" },
+        { value: "Very Rare", label: "Very Rare" },
+        { value: "Legendary", label: "Legendary" },
+        { value: "Artifact", label: "Artifact" }
+    ];
 
-    for (const rarity of rarities) {
+    const availableRarities = new Set(
+        state.items.map(item => item.rarity)
+    );
+
+    for (const rarity of rarityOrder) {
+        if (!availableRarities.has(rarity.value)) {
+            continue;
+        }
+
         const label =
             document.createElement("label");
 
@@ -680,15 +690,15 @@ function buildRarityFilter() {
             document.createElement("input");
 
         checkbox.type = "checkbox";
-        checkbox.value = rarity;
+        checkbox.value = rarity.value ?? "";
         checkbox.checked =
-            state.filters.rarities.has(rarity);
+            state.filters.rarities.has(rarity.value);
 
         checkbox.addEventListener("change", () => {
             if (checkbox.checked) {
-                state.filters.rarities.add(rarity);
+                state.filters.rarities.add(rarity.value);
             } else {
-                state.filters.rarities.delete(rarity);
+                state.filters.rarities.delete(rarity.value);
             }
 
             renderEquipment();
@@ -697,11 +707,7 @@ function buildRarityFilter() {
         const text =
             document.createElement("span");
 
-        text.textContent =
-            rarity.replace(
-                /\b\w/g,
-                char => char.toUpperCase()
-            );
+        text.textContent = rarity.label;
 
         label.append(checkbox, text);
         rarityOptions.appendChild(label);
@@ -768,10 +774,7 @@ function getFilteredItems() {
             return false;
         }
 
-        if (
-            filters.categories.size &&
-            !filters.categories.has(item.category)
-        ) {
+        if (!matchesCategories(item)) {
             return false;
         }
 
@@ -841,6 +844,42 @@ function matchesSearch(item, search) {
         String(value ?? "")
             .toLowerCase()
             .includes(query)
+    );
+}
+
+function matchesCategories(item) {
+    const selected = state.filters.categories;
+
+    if (selected.size === 0) {
+        return true;
+    }
+
+    const isMagic = item.rarity !== null;
+    const wantsMagic = selected.has("Magic Item");
+
+    const otherCategories = [...selected].filter(
+        category => category !== "Magic Item"
+    );
+
+    // Magic Item selected: restrict to magic items.
+    if (wantsMagic && !isMagic) {
+        return false;
+    }
+
+    // Only Magic Item selected.
+    if (otherCategories.length === 0) {
+        return true;
+    }
+
+    // For magic items, use type as the category.
+    // For mundane items, use the category array.
+    const categories = isMagic
+        ? [item.type]
+        : item.category;
+
+    // Non-magic category selections are OR.
+    return otherCategories.some(category =>
+        categories.includes(category)
     );
 }
 

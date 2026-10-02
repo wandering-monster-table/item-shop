@@ -74,9 +74,6 @@ select {
    ========================================================= */
 
 .site-header {
-    position: sticky;
-    top: 0;
-    z-index: 700;
     background: var(--header);
     color: white;
 }
@@ -715,7 +712,7 @@ select {
 
 .cart {
     position: sticky;
-    top: 1.25rem;
+    top: 2rem;
 
     min-height: 180px;
 
