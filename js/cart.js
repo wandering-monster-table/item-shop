@@ -83,19 +83,21 @@ export function getCartItemCount() {
     return count;
 }
 
-export function getCartTotal(items) {
+export function getCartTotal(items, getItemPrice) {
     let total = 0;
 
     for (const [itemId, quantity] of cart) {
-        const item = items.find(
-            item => item.item_id === itemId
-        );
+        const item =
+            items.find(item => item.item_id === itemId);
 
-        if (
-            item &&
-            typeof item.cost_cp === "number"
-        ) {
-            total += item.cost_cp * quantity;
+        if (!item) {
+            continue;
+        }
+
+        const price = getItemPrice(item);
+
+        if (typeof price === "number") {
+            total += price * quantity;
         }
     }
 

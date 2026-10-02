@@ -2823,7 +2823,7 @@
     "details": {
       "hit_points_regained": "2d4 + 2"
     },
-    "description": "You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below.\n\nWhatever its potency, the potion's red liquid glimmers when agitated.\n\n| Potion                       | HP Regained | Rarity    |\n|------------------------------|-------------|-----------|\n| Potion of Healing            | 2d4 + 2     | Common    |\n| Potion of Healing (greater)  | 4d4 + 4     | Uncommon  |\n| Potion of Healing (superior) | 8d4 + 8     | Rare      |\n| Potion of Healing (supreme)  | 10d4 + 20   | Very Rare |",
+    "description": "You regain Hit Points when you drink this potion. Whatever its potency, the potion's red liquid glimmers when agitated.",
     "cost_cp": null,
     "weight": null
   },
@@ -2841,7 +2841,7 @@
     "details": {
       "hit_points_regained": "4d4 + 4"
     },
-    "description": "You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below.\n\nWhatever its potency, the potion's red liquid glimmers when agitated.\n\n| Potion                       | HP Regained | Rarity    |\n|------------------------------|-------------|-----------|\n| Potion of Healing            | 2d4 + 2     | Common    |\n| Potion of Healing (greater)  | 4d4 + 4     | Uncommon  |\n| Potion of Healing (superior) | 8d4 + 8     | Rare      |\n| Potion of Healing (supreme)  | 10d4 + 20   | Very Rare |",
+    "description": "You regain Hit Points when you drink this potion. Whatever its potency, the potion's red liquid glimmers when agitated.",
     "cost_cp": null,
     "weight": null
   },
@@ -2859,7 +2859,7 @@
     "details": {
       "hit_points_regained": "8d4 + 8"
     },
-    "description": "You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below.\n\nWhatever its potency, the potion's red liquid glimmers when agitated.\n\n| Potion                       | HP Regained | Rarity    |\n|------------------------------|-------------|-----------|\n| Potion of Healing            | 2d4 + 2     | Common    |\n| Potion of Healing (greater)  | 4d4 + 4     | Uncommon  |\n| Potion of Healing (superior) | 8d4 + 8     | Rare      |\n| Potion of Healing (supreme)  | 10d4 + 20   | Very Rare |",
+    "description": "You regain Hit Points when you drink this potion. Whatever its potency, the potion's red liquid glimmers when agitated.",
     "cost_cp": null,
     "weight": null
   },
@@ -2877,7 +2877,7 @@
     "details": {
       "hit_points_regained": "10d4 + 20"
     },
-    "description": "You regain Hit Points when you drink this potion. The number of Hit Points depends on the potion's rarity, as shown in the table below.\n\nWhatever its potency, the potion's red liquid glimmers when agitated.\n\n| Potion                       | HP Regained | Rarity    |\n|------------------------------|-------------|-----------|\n| Potion of Healing            | 2d4 + 2     | Common    |\n| Potion of Healing (greater)  | 4d4 + 4     | Uncommon  |\n| Potion of Healing (superior) | 8d4 + 8     | Rare      |\n| Potion of Healing (supreme)  | 10d4 + 20   | Very Rare |",
+    "description": "You regain Hit Points when you drink this potion. Whatever its potency, the potion's red liquid glimmers when agitated.",
     "cost_cp": null,
     "weight": null
   },

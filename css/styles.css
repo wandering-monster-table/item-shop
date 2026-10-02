@@ -127,7 +127,11 @@ select {
 .settings {
     position: relative;
 }
-
+.legal {
+    margin-left: 100px;
+    margin-right: 100px;
+    margin-bottom: 50px;
+}
 .legal p {
     font-family: Arial, Helvetica, sans-serif;
     font-size: small;
@@ -135,8 +139,16 @@ select {
 }
 .legal h1 {
     font-size: medium;
-    margin: 4px;
+    margin-bottom: 4px;
 }
+.legal-copyright{
+    padding-top: 1.5rem;
+    text-align: center;
+}
+
+/* =========================================================
+   SETTINGS MENU
+   ========================================================= */
 
 .settings-button {
     min-height: 2.25rem;
@@ -175,7 +187,8 @@ select {
 }
 
 .settings-menu-title {
-    margin-bottom: 0.8rem;
+    margin-top: 1.25rem;
+    margin-bottom: 0.65rem;
 
     color: var(--text-muted);
 
@@ -185,10 +198,15 @@ select {
     letter-spacing: 0.05em;
 }
 
+.settings-menu > .settings-menu-title:first-child {
+    margin-top: 0;
+}
+
 .settings-option {
     display: flex;
     flex-direction: column;
     gap: 0.35rem;
+    margin-top: 1rem;
 }
 
 .settings-option label {
@@ -206,8 +224,46 @@ select {
 
     background: var(--surface);
     color: var(--text);
+
+    font-size: 0.85rem;
 }
 
+.settings-option input[type="checkbox"] {
+    margin: 0 0.4rem 0 0;
+}
+
+.settings-option p {
+    margin: 0;
+
+    color: var(--text-secondary);
+
+    font-size: 0.8rem;
+    line-height: 1.4;
+}
+
+.settings-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.settings-actions button {
+    flex: 1;
+    min-height: 2.4rem;
+    padding: 0.45rem 0.55rem;
+
+    border: 1px solid var(--border-input);
+    border-radius: 5px;
+
+    background: var(--surface);
+    color: var(--text);
+
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.settings-actions button:hover {
+    background: var(--surface-hover);
+}
 
 /* =========================================================
    PAGE & SHOP HEADER

@@ -12,12 +12,36 @@ import {
 } from "./cart.js";
 
 const DATASET_STORAGE_KEY = "dnd-equipment-shop-dataset";
+const SETTINGS_STORAGE_KEY = "dnd-equipment-shop-settings";
+const MAGIC_ITEM_PRICES_STORAGE_KEY =
+    "dnd-equipment-shop-magic-item-prices";
+const TRANSACTIONS_STORAGE_KEY =
+    "dnd-equipment-shop-transactions";
+
+const MAGIC_ITEM_PRICE_RANGES = {
+    Common:      [25,50,90],
+    Uncommon:    [150,500,900],
+    Rare:        [1500,5000,9000],
+    "Very Rare": [15000,50000,90000],
+    Legendary:   [150000,500000,900000],
+    Artifact: null
+};
+
+
 
 const state = {
     datasets: [],
     currentDataset: null,
     items: [],
     expandedItems: new Set(),
+
+    settings: {
+        magicItems: false,
+        magicItemPricing: "disabled"
+    },
+
+    magicItemPrices: {},
+    transactions: [],
 
     sort: {
         field: "name",
@@ -35,6 +59,145 @@ const state = {
     }
 };
 
+function getItemPrice(item) {
+    if (item.rarity === null) {
+        return item.cost_cp;
+    }
+
+    switch (state.settings.magicItemPricing) {
+        case "disabled":
+            return null;
+
+        case "average":
+            return getRarityPrice(item.rarity);
+
+        case "random":
+            return getMagicItemPrice(item);
+
+        default:
+            return null;
+    }
+}
+
+function getRarityPrice(rarity) {
+    const range =
+        MAGIC_ITEM_PRICE_RANGES[rarity];
+
+    if (!range) {
+        return null;
+    }
+
+    return range[1] * 100;
+}
+
+function loadMagicItemPrices() {
+    const saved =
+        getStorage(MAGIC_ITEM_PRICES_STORAGE_KEY);
+
+    if (!saved) return;
+
+    try {
+        const parsed = JSON.parse(saved);
+
+        if (!parsed || typeof parsed !== "object") {
+            return;
+        }
+
+        for (const [itemId, price] of Object.entries(parsed)) {
+            if (
+                typeof itemId === "string" &&
+                typeof price === "number" &&
+                Number.isInteger(price) &&
+                price >= 0
+            ) {
+                state.magicItemPrices[itemId] = price;
+            }
+        }
+    } catch {
+        // Ignore invalid saved prices.
+    }
+}
+
+function getMagicItemPrice(item) {
+    const existingPrice =
+        state.magicItemPrices[item.item_id];
+
+    if (typeof existingPrice === "number") {
+        return existingPrice;
+    }
+
+    const range =
+        MAGIC_ITEM_PRICE_RANGES[item.rarity];
+
+    if (!range) {
+        return null;
+    }
+
+    const [minimum, , maximum] = range;
+
+    const priceGP =
+        Math.floor(
+            Math.random() * (maximum - minimum + 1)
+        ) + minimum;
+
+    let priceCP = 0;
+    if (priceGP < 1000) {
+        priceCP = priceGP * 100;
+    } else if (priceGP < 10000) {
+        priceCP = Math.round(priceGP / 10) * 1000;
+    } else if (priceGP < 100000) {
+        priceCP = Math.round(priceGP / 100) * 10000;
+    } else {
+        priceCP = Math.round(priceGP / 1000) * 100000;
+    }
+        
+    state.magicItemPrices[item.item_id] =
+        priceCP;
+
+    saveMagicItemPrices();
+
+    return priceCP;
+}
+
+function saveMagicItemPrices() {
+    setStorage(
+        MAGIC_ITEM_PRICES_STORAGE_KEY,
+        JSON.stringify(state.magicItemPrices)
+    );
+}
+
+function saveTransactions() {
+    setStorage(
+        TRANSACTIONS_STORAGE_KEY,
+        JSON.stringify(state.transactions)
+    );
+}
+
+function loadTransactions() {
+    const saved =
+        getStorage(TRANSACTIONS_STORAGE_KEY);
+
+    if (!saved) return;
+
+    try {
+        const parsed = JSON.parse(saved);
+
+        if (!Array.isArray(parsed)) {
+            return;
+        }
+
+        state.transactions = parsed.filter(
+            transaction =>
+                transaction &&
+                typeof transaction === "object" &&
+                typeof transaction.id === "string" &&
+                typeof transaction.datetime === "string" &&
+                typeof transaction.markdown === "string"
+        );
+    } catch {
+        // Ignore invalid saved transactions.
+    }
+}
 
 // =========================================================
 // DOM
@@ -56,6 +219,7 @@ const weightMinInput = $("#weight-min");
 const weightMaxInput = $("#weight-max");
 
 const rarityOptions = $("#rarity-options");
+const rarityFilter = $("#rarity-filter");
 
 const resetFiltersButton = $("#reset-filters");
 
@@ -63,6 +227,8 @@ const moreFiltersButton = $("#more-filters-button");
 const moreFilters = $("#more-filters");
 
 const datasetSelect = $("#dataset-select");
+const magicItemsToggle = $("#magic-items-toggle");
+const magicItemPricing = $("#magic-item-pricing");
 
 const equipmentList = $("#equipment-list");
 const status = $("#status");
@@ -102,6 +268,10 @@ const purchaseConfirm = $("#purchase-confirm");
 // =========================================================
 
 async function init() {
+    loadSettings();
+    updateSettingsControls();
+    loadMagicItemPrices();
+    loadTransactions();
     loadCart();
 
     setupSettings();
@@ -138,6 +308,46 @@ async function init() {
 // =========================================================
 // Settings
 // =========================================================
+function loadSettings() {
+    const saved = getStorage(SETTINGS_STORAGE_KEY);
+
+    if (!saved) {
+        return;
+    }
+
+    try {
+        const parsed = JSON.parse(saved);
+
+        if (
+            parsed &&
+            typeof parsed === "object"
+        ) {
+            if (typeof parsed.magicItems === "boolean") {
+                state.settings.magicItems =
+                    parsed.magicItems;
+            }
+
+            if (
+                parsed.magicItemPricing === "disabled" ||
+                parsed.magicItemPricing === "average" ||
+                parsed.magicItemPricing === "random"
+            ) {
+                state.settings.magicItemPricing =
+                    parsed.magicItemPricing;
+            }
+        }
+    } catch {
+        // Ignore invalid settings.
+    }
+}
+
+function updateSettingsControls() {
+    magicItemsToggle.checked =
+        state.settings.magicItems;
+
+    magicItemPricing.value =
+        state.settings.magicItemPricing;
+}
 
 function setupSettings() {
     settingsButton.addEventListener("click", event => {
@@ -158,6 +368,23 @@ function setupSettings() {
     });
 
     document.addEventListener("click", closePopovers);
+
+    //  Setting controls //
+    magicItemsToggle.addEventListener("change", () => {
+        state.settings.magicItems =
+            magicItemsToggle.checked;
+        saveSettings();
+        buildRarityFilter();
+        renderEquipment();
+    });
+
+    magicItemPricing.addEventListener("change", () => {
+        state.settings.magicItemPricing =
+            magicItemPricing.value;
+        saveSettings();
+        renderEquipment();
+        renderCart();
+    });
 }
 
 function closePopovers() {
@@ -180,6 +407,13 @@ function togglePopover(menu, button) {
 function closePopover(menu, button) {
     menu.hidden = true;
     button.setAttribute("aria-expanded", "false");
+}
+
+function saveSettings() {
+    setStorage(
+        SETTINGS_STORAGE_KEY,
+        JSON.stringify(state.settings)
+    );
 }
 
 
@@ -328,7 +562,7 @@ function openPurchaseModal() {
         const cost = document.createElement("span");
         cost.className = "purchase-item-cost";
         cost.textContent =
-            formatCost(item.cost_cp * quantity);
+            formatCost(getItemPrice(item) * quantity);
 
         row.append(name, cost);
         purchaseSummary.appendChild(row);
@@ -345,7 +579,7 @@ function openPurchaseModal() {
 
     const totalCost = document.createElement("strong");
     totalCost.textContent =
-        formatCost(getCartTotal(state.items));
+        formatCost(getCartTotal(state.items, getItemPrice));
 
     totalRow.append(totalLabel, totalCost);
 
@@ -379,6 +613,18 @@ async function confirmPurchase() {
 
     try {
         await navigator.clipboard.writeText(markdown);
+        const transaction = {
+            id: generateTransactionId(),
+            datetime: new Date().toISOString(),
+            markdown
+        };
+
+        console.log("Transaction completed:", transaction.id);
+
+
+        state.transactions.unshift(transaction);
+
+        saveTransactions();
         clearCart();
         renderCart();
 
@@ -406,7 +652,7 @@ function createPurchaseMarkdown() {
         }
 
         const totalItemCost =
-            item.cost_cp * quantity;
+            getItemPrice(item) * quantity;
 
         lines.push(
             `- ${quantity}× ${item.item_name} (${formatCost(totalItemCost)})`
@@ -415,7 +661,7 @@ function createPurchaseMarkdown() {
 
     lines.push(
         "",
-        `**Total:** ${formatCost(getCartTotal(state.items))}`,
+        `**Total:** ${formatCost(getCartTotal(state.items, getItemPrice))}`,
         `**Weight:** ${formatNumber(getCartWeight(state.items))} lb`
     );
 
@@ -662,6 +908,13 @@ function buildCategoryFilter() {
 function buildRarityFilter() {
     rarityOptions.innerHTML = "";
 
+    rarityFilter.hidden=
+        !state.settings.magicItems;
+
+    if(!state.settings.magicItems) {
+        return;
+    }
+
     const rarityOrder = [
         { value: null, label: "Mundane" },
         { value: "Common", label: "Common" },
@@ -767,6 +1020,15 @@ function getFilteredItems() {
     const filters = state.filters;
 
     return state.items.filter(item => {
+        // Magic item toggle
+        if (
+            !state.settings.magicItems &&
+            item.rarity !== null
+        ) {
+            return false;
+        }
+
+        // Search filter
         if (
             filters.search &&
             !matchesSearch(item, filters.search)
@@ -774,6 +1036,14 @@ function getFilteredItems() {
             return false;
         }
 
+        if (
+            filters.search &&
+            !matchesSearch(item, filters.search)
+        ) {
+            return false;
+        }
+
+        // Category filter
         if (!matchesCategories(item)) {
             return false;
         }
@@ -785,11 +1055,12 @@ function getFilteredItems() {
             return false;
         }
 
+        // Cost filter
         if (
             filters.costMin !== null &&
             (
-                typeof item.cost_cp !== "number" ||
-                item.cost_cp < filters.costMin
+                typeof getItemPrice(item) !== "number" ||
+                getItemPrice(item) < filters.costMin
             )
         ) {
             return false;
@@ -798,13 +1069,14 @@ function getFilteredItems() {
         if (
             filters.costMax !== null &&
             (
-                typeof item.cost_cp !== "number" ||
-                item.cost_cp > filters.costMax
+                typeof getItemPrice(item) !== "number" ||
+                getItemPrice(item) > filters.costMax
             )
         ) {
             return false;
         }
 
+        // Weight filter
         if (
             filters.weightMin !== null &&
             (
@@ -830,21 +1102,37 @@ function getFilteredItems() {
 }
 
 function matchesSearch(item, search) {
-    const query = search.toLowerCase();
-
-    return [
+    const text = [
         item.item_name,
         item.category,
         item.type,
-        item.rarity,
-        item.properties,
-        item.weapon_mastery,
-        item.description
-    ].some(value =>
-        String(value ?? "")
-            .toLowerCase()
-            .includes(query)
+        item.rarity
+    ]
+        .filter(value => value !== null && value !== undefined)
+        .join(" ")
+        .toLowerCase();
+
+    const groups = parseSearch(search);
+
+    return groups.some(group =>
+        group.every(term =>
+            text.includes(term.toLowerCase())
+        )
     );
+}
+
+function parseSearch(search) {
+    return search
+        .split(" OR ")
+        .map(group =>
+            group
+                .trim()
+                .match(/"[^"]*"|\S+/g)
+                ?.map(term =>
+                    term.replace(/^"|"$/g, "")
+                ) || []
+        )
+        .filter(group => group.length);
 }
 
 function matchesCategories(item) {
@@ -913,8 +1201,8 @@ function sortItems(items) {
                 ),
 
                 cost: compareNumbers(
-                    a.cost_cp,
-                    b.cost_cp
+                    getItemPrice(a),
+                    getItemPrice(b)
                 )
             }[field] ??
             compareStrings(
@@ -974,7 +1262,7 @@ function createEquipmentRow(item) {
         ["item-name", item.item_name],
         ["item-category", item.category || "—"],
         ["item-type", item.type || "—"],
-        ["item-cost", formatCost(item.cost_cp)]
+        ["item-cost", formatCost(getItemPrice(item))]
     ];
 
     for (const [className, value] of fields) {
@@ -1078,7 +1366,7 @@ function renderCart() {
 
     cartCost.textContent =
         formatCost(
-            getCartTotal(state.items)
+            getCartTotal(state.items, getItemPrice)
         );
 
     cartWeight.textContent =
@@ -1111,7 +1399,7 @@ function createCartItem(item, quantity) {
         "cart-item-cost";
 
     cost.textContent =
-        formatCost(item.cost_cp);
+        formatCost(getItemPrice(item));
 
     const controls =
         document.createElement("div");
@@ -1491,6 +1779,33 @@ function updateStatus(count) {
         `${count} of ${state.items.length} items`;
 }
 
+// Transaction helper function
+
+const TRANSACTION_ID_CHARS =
+    "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+function generateTransactionId() {
+    let id;
+
+    do {
+        id = "";
+
+        for (let i = 0; i < 6; i++) {
+            id += TRANSACTION_ID_CHARS[
+                Math.floor(
+                    Math.random() *
+                    TRANSACTION_ID_CHARS.length
+                )
+            ];
+        }
+    } while (
+        state.transactions.some(
+            transaction => transaction.id === id
+        )
+    );
+
+    return id;
+}
 
 // =========================================================
 // Local Storage
@@ -1515,9 +1830,17 @@ function setStorage(key, value) {
     }
 }
 
+function clearStore() {
+    localStorage.removeItem(DATASET_STORAGE_KEY);
+    localStorage.removeItem(SETTINGS_STORAGE_KEY);
+    localStorage.removeItem(MAGIC_ITEM_PRICES_STORAGE_KEY);
+
+    location.reload();
+}
+
 
 // =========================================================
-// Errors
+// Errors and Dev Tools
 // =========================================================
 
 function showError(error) {
@@ -1540,7 +1863,7 @@ function showError(error) {
 
     equipmentList.appendChild(message);
 }
-
+window.clearStore = clearStore;
 
 // =========================================================
 // Start

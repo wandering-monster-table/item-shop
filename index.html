@@ -29,38 +29,74 @@
                 Settings
             </button>
 
-            <div
-                id="settings-menu"
-                class="settings-menu"
-                hidden
-            >
-                <div class="settings-menu-title">
-                    Shop Settings
-                </div>
+        <div
+            id="settings-menu"
+            class="settings-menu"
+            hidden
+        >
+            <div class="settings-menu-title">
+                Dataset
+            </div>
 
-                <div class="settings-option">
-                    <label for="dataset-select">
-                        Equipment Dataset
-                    </label>
+            <div class="settings-option">
+                <select id="dataset-select">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
 
-                    <select id="dataset-select">
-                        <option value="">Loading...</option>
-                    </select>
+            <div class="settings-menu-title">
+                Store Settings
+            </div>
 
-                    <div class="legal">
-                        <h1>Licensing & Attribution</h1>
-                        <p>Some equipment data used in this project was obtained from the <a href="https://open5e.com/">Open5e</a> API and Creative Commons-licensed material.</p>
+            <div class="settings-option">
+                <label>
+                    <input
+                        id="magic-items-toggle"
+                        type="checkbox"
+                        checked
+                    >
+                    Magic items
+                </label>
+            </div>
 
-                        <h1>SRD 5.2</h1>
-                        <p>
-                        This work includes material from the System Reference Document 5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at <a href="https://www.dndbeyond.com/srd">https://www.dndbeyond.com/srd</a>.
-                        The SRD 5.2 is licensed under the Creative Commons Attribution 4.0 International License, available at <a href="https://creativecommons.org/licenses/by/4.0/legalcode">https://creativecommons.org/</a>.
-                        </p>
-                    </div>
+            <div class="settings-option">
+                <label for="magic-item-pricing">
+                    Magic item prices
+                </label>
+
+                <select id="magic-item-pricing">
+                    <option value="disabled">Disabled</option>
+                    <option value="average">Average</option>
+                    <option value="random">Randomized</option>
+                </select>
+            </div>
+
+            <div class="settings-menu-title">
+                Backup Store
+            </div>
+
+            <div class="settings-option">
+                <p>
+                    Backup or restore your settings and transaction history.
+                </p>
+
+                <div class="settings-actions">
+                    <button
+                        id="backup-settings"
+                        type="button"
+                    >
+                        Backup
+                    </button>
+
+                    <button
+                        id="restore-settings"
+                        type="button"
+                    >
+                        Restore
+                    </button>
                 </div>
             </div>
         </div>
-
     </div>
 </header>
 
@@ -201,7 +237,7 @@
                         class="filter-popover-menu more-filters-menu"
                         hidden
                     >
-                        <div class="more-filter-section">
+                        <div id="rarity-filter" class="more-filter-section">
                             <div class="more-filter-label">Rarity</div>
 
                             <div
@@ -362,6 +398,35 @@
     </aside>
 
 </main>
+
+<footer>
+    <div class="legal">
+        <h1>Licensing & Attribution</h1>
+
+        <p>
+            Some equipment data used in this project was obtained from the
+            <a href="https://open5e.com/">Open5e</a> API and
+            Creative Commons-licensed material.
+        </p>
+
+        <h1>SRD 5.2</h1>
+
+        <p>
+            This work includes material from the System Reference Document
+            5.2 (“SRD 5.2”) by Wizards of the Coast LLC, available at
+            <a href="https://www.dndbeyond.com/srd">https://www.dndbeyond.com/srd</a>.
+            The SRD 5.2 is licensed under the Creative Commons Attribution
+            4.0 International License, available at
+            <a href="https://creativecommons.org/licenses/by/4.0/legalcode">
+                https://creativecommons.org/
+            </a>.
+        </p>
+        <p class="legal-copyright">
+            © 2026 Wandering Monster Table
+        </p>
+    </div>
+
+</footer>
 
 <div id="empty-cart-modal" class="modal" hidden>
     <div class="modal-backdrop"></div>
